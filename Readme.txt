@@ -1,0 +1,1 @@
+Da vidim če dela?
