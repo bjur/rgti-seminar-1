@@ -1,0 +1,38 @@
+# Blender MTL File: 'None'
+# Material Count: 3
+
+newmtl 01___Default
+Ns 7.843137
+Ka 0.000000 0.000000 0.000000
+Kd 0.470560 0.470560 0.470560
+Ks 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd car\0000.BMP
+map_Bump car\\0000.BMP
+map_Ka car\\0000.BMP
+refl Map__6_Raytrace.tga
+
+newmtl 02___Default
+Ns 15.686275
+Ka 0.000000 0.000000 0.000000
+Kd 0.470560 0.470560 0.470560
+Ks 0.621000 0.621000 0.621000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd car\0001.BMP
+map_Bump car\\0000.BMP
+map_Ka car\\0001.BMP
+refl Map__8_Raytrace.tga
+
+newmtl myglass_HL
+Ns 47.058824
+Ka 0.000000 0.000000 0.000000
+Kd 0.078400 0.090960 0.100400
+Ks 0.540000 0.540000 0.540000
+Ni 1.500000
+d 0.300000
+illum 2
+refl Map__9_Raytrace.tga
