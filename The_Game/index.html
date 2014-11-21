@@ -13,11 +13,13 @@
   <script>
 
     // Set up the scene, camera, and renderer as global variables.
-    var scene, camera, renderer,car;
+    var scene, camera, renderer,car,cu,carHitBox;
     var keyboard = new THREEx.KeyboardState();
     var angle=0;
     var speed=0;
-
+    var visible=1;
+    var ff=0;
+    var collidableMeshList=[];
     init();
     animate();
 
@@ -26,8 +28,8 @@
 
       // Create the scene and set the scene size.
       scene = new THREE.Scene();
-      var WIDTH = window.innerWidth-100,
-          HEIGHT = window.innerHeight-100;
+      var WIDTH = window.innerWidth*9/10,
+          HEIGHT = window.innerHeight*9/10;
 
       // Create a renderer and add it to the DOM.
       renderer = new THREE.WebGLRenderer({antialias:true});
@@ -36,7 +38,7 @@
 
       // Create a camera, zoom it out from the model a bit, and add it to the scene.
       camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
-      camera.position.set(0,10,-20);
+      camera.position.set(5, 2, -204);
       scene.add(camera);
 
       // Create an event listener that resizes the renderer with the browser window.
@@ -53,54 +55,182 @@
 
       // Create a light, set its position, and add it to the scene.
       var light = new THREE.PointLight(0xffffff);
-      light.position.set(-100,200,100);
+      light.position.set(0, 0, -200);
       scene.add(light);
       
       //Create the ground
       var groundGeo = new THREE.PlaneGeometry(400,400);
-      var groundMat = new THREE.MeshLambertMaterial( { color: 0xffffff, opacity: 1.0, transparent: false } ); 
-      var ground = new THREE.Mesh(groundGeo,groundMat);
+      // var groundMat = new THREE.MeshLambertMaterial( { color: 0xffffff, opacity: 1.0, transparent: false } ); 
+      //CHANGED to MeshBasicMaterial
+      var img = new THREE.MeshBasicMaterial({ map:THREE.ImageUtils.loadTexture('assets/sand.jpg')});
+      var ground = new THREE.Mesh(groundGeo,img);
       ground.position.y = -0.5; //lower it
       ground.rotation.x = -Math.PI/2; //-90 degrees around the xaxis
+      img.map.needsUpdate = true;
       //IMPORTANT, draw on both sides
       ground.doubleSided = true;
-      scene.add(ground);
-      
+      scene.add(ground); 
+
       // Load in the mesh and add it to the scene.
       var loader = new THREE.JSONLoader();
       loader.load( "models/911.js", function(geometry){
         //var material = new THREE.MeshLambertMaterial({color: 0x1111FF});
-        var material = new THREE.MeshLambertMaterial( { color: 0x995500, opacity: 1.0, transparent: false } ); 
+        var material = new THREE.MeshLambertMaterial( { color: 0x1111FF, opacity: 1.0, transparent: false } ); 
         mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(5,0,-197);
         scene.add(mesh);
         car=mesh;
       });
-
+      
+      //Generate hitbox for car
+      //var i=1;
+      //var k = car;
+      
+      /*for(var vertexIndex=0;vertexIndex<car.geometry.vertices.length;vertexIndex++){
+        i++;
+      }*/
+      
+      //Add cube
+      var material = new THREE.MeshLambertMaterial( { color: 0xFFFFFF, opacity: 1.0, transparent: false } ); 
+      var cubGeo = new THREE.CubeGeometry(2, 2, 2, 1, 1,1);
+      cube = new THREE.Mesh(cubGeo,material);	
+     cube.position.set(5, 1.5, -170);
+      cube.rotation.x=-Math.PI/4;
+      cube.rotation.y=-Math.PI/4;
+      scene.add( cube );
+      cu=cube;
+      collidableMeshList.push(cube);
       // Add OrbitControls so that we can pan around with the mouse.
       controls = new THREE.OrbitControls(camera, renderer.domElement);
-
+      
     }
 
-
+     // Add track
+    var loader = new THREE.JSONLoader();
+    loader.load( "RaceTrack/RaceTrack/FullRaceTrack.js", function(geometry){
+      //var material = new THREE.MeshLambertMaterial({color: 0x1111FF});
+      var material = new THREE.MeshLambertMaterial( { color: 0x11111F, opacity: 1.0, transparent: false } ); 
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(40,0,20);
+      scene.add(mesh);
+    });
+    
+    
     // Renders the scene and updates the render as needed.
+    
     function animate() {
-  
       // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
+      ff++;
       requestAnimationFrame(animate);
       // Render the scene.
       renderer.render(scene, camera);
-      controls.update();
-      animateCar();
+      if(ff>4)
+        update();      
     }
     
+    function update(){
+      controls.update();
+      animateCar();
+      //camera.lookAt(carHitBox.position);
+      if(keyboard.pressed("v")) {
+        cu.scale.set(1,1,1);
+        //cu.material.opacity=1.0;
+        //cu.material.transparent=false;
+        //carHitBox.material.opacity=1.0;
+        //carHibBox.material.transparent=false;
+      }
+      if(keyboard.pressed("b")) {
+        //cu.material.opacity=0.0;
+        //cu.material.transparent=true;
+        cu.scale.set(0,0,0);
+        //carHitBox.material.opacity=0.0;
+        //carHitBox.material.transparent=true;
+      }
+      if(ff==5){
+        getCarHitbox();
+      }
+      if (ff>6) {
+        collisionUpdate();
+      }
+    }
+    
+    function getCarHitbox(){
+      //alert(car);
+      carHitBox=1;
+      var xMax=car.geometry.vertices[0].x;
+      var xMin=car.geometry.vertices[0].x;
+      var yMax=car.geometry.vertices[0].y;
+      var yMin=car.geometry.vertices[0].y;
+      var zMax=car.geometry.vertices[0].z;
+      var zMin=car.geometry.vertices[0].z;
+      for (var vertexIndex = 0; vertexIndex < car.geometry.vertices.length; vertexIndex++){
+            var tmp = car.geometry.vertices[vertexIndex].clone();
+            if(tmp.x>xMax)
+              xMax=tmp.x;
+            else if(tmp.x<xMin)
+              xMin=tmp.x;
+            else if(tmp.y>yMax)
+              yMax=tmp.y;
+            else if(tmp.y<yMin)
+              yMin=tmp.y;
+            else if(tmp.z>zMax)
+              zMax=tmp.z;
+            else if(tmp.z<zMin)
+              zMin=tmp.z;
+      }
+      var xlen=Math.abs(xMax-xMin);
+      var ylen=Math.abs(yMax-yMin);
+      var zlen=Math.abs(zMax-zMin);
+      var vector = new THREE.Vector3((xMax+xMin)/2,(yMax+yMin)/2,(zMax+zMin)/2);
+      console.log(vector);
+      vector.applyMatrix4(car.matrixWorld);
+      console.log(vector);
+      
+      var material = new THREE.MeshLambertMaterial( { color: 0x995500, opacity: 0.0, transparent: true } ); 
+      var cubGeo = new THREE.CubeGeometry(xlen, ylen, zlen, 1, 1, 1);
+      var cub = new THREE.Mesh(cubGeo,material);
+      cub.position.set(vector.x,vector.y,vector.z);
+      scene.add( cub );
+      carHitBox=cub;      
+      
+      /*console.log("xMax:"+xMax);
+      console.log("xMin:"+xMin);
+      console.log("yMax:"+yMax);
+      console.log("yMin:"+yMin);
+      console.log("zMax:"+zMax);
+      console.log("zMin:"+zMin);
+      console.log(xlen +" "+ylen+" "+zlen);*/
+
+    }
+    //camera.lookAt(carHitBox.position)
+    function collisionUpdate(){
+      var originPoint = carHitBox.position.clone();
+      for (var vertexIndex = 0; vertexIndex < carHitBox.geometry.vertices.length; vertexIndex++)
+	{		
+		var localVertex = carHitBox.geometry.vertices[vertexIndex].clone();
+		var globalVertex = localVertex.applyMatrix4( carHitBox.matrix );
+		var directionVector = globalVertex.sub( carHitBox.position );
+                //alert(directionVector);
+                
+                var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
+		var collisionResults = ray.intersectObjects( collidableMeshList );
+		if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() ) 
+			crashReact();
+        }
+    }
+    function crashReact(){
+      cu.scale.set(0,0,0);
+    }
     function animateCar(){
       if(speed>0){
         if(keyboard.pressed("left")) { 
           car.rotation.y += 0.1*speed; 
-          angle += 0.1*speed; 
+          angle += 0.1*speed;
+          carHitBox.rotation.y += 0.1*speed; 
       } 
       if(keyboard.pressed("right")) { 
-          car.rotation.y -= 0.1*speed; 
+          car.rotation.y -= 0.1*speed;
+          carHitBox.rotation.y -= 0.1*speed; 
           angle -= 0.1*speed; 
       } 
         //Going forward accelerating
@@ -111,6 +241,8 @@
           }
           car.position.z += Math.cos(angle)*speed; 
           car.position.x += Math.sin(angle)*speed;
+          carHitBox.position.z += Math.cos(angle)*speed; 
+          carHitBox.position.x += Math.sin(angle)*speed;
         }
         //Going forward breaking
         else if(keyboard.pressed("down")) {
@@ -120,6 +252,8 @@
           }
           car.position.z += Math.cos(angle)*speed; 
           car.position.x += Math.sin(angle)*speed;
+          carHitBox.position.z += Math.cos(angle)*speed; 
+          carHitBox.position.x += Math.sin(angle)*speed;
         }
         else{
           //Going forward on its own
@@ -127,17 +261,21 @@
           if(speed>0){
             car.position.z += Math.cos(angle)*speed; 
             car.position.x += Math.sin(angle)*speed;
+            carHitBox.position.z += Math.cos(angle)*speed; 
+            carHitBox.position.x += Math.sin(angle)*speed;
           }
         }
         
       }
       else if(speed<0){
         if(keyboard.pressed("left")) { 
-          car.rotation.y -= 0.1*(-speed); 
+          car.rotation.y -= 0.1*(-speed);
+          carHitBox.rotation.y -= 0.1*(-speed);
           angle -= 0.1*(-speed); 
       } 
       if(keyboard.pressed("right")) { 
-          car.rotation.y += 0.1*(-speed); 
+          car.rotation.y += 0.1*(-speed);
+          carHitBox.rotation.y += 0.1*(-speed);
           angle += 0.1*(-speed); 
       } 
         if(keyboard.pressed("up")) {
@@ -147,6 +285,8 @@
           }
           car.position.z += Math.cos(angle)*speed; 
           car.position.x += Math.sin(angle)*speed;
+          carHitBox.position.z += Math.cos(angle)*speed; 
+          carHitBox.position.x += Math.sin(angle)*speed;
         }
         else if(keyboard.pressed("down")) {
           speed -= 0.08;  
@@ -155,6 +295,8 @@
           }
           car.position.z += Math.cos(angle)*speed; 
           car.position.x += Math.sin(angle)*speed;
+          carHitBox.position.z += Math.cos(angle)*speed; 
+          carHitBox.position.x += Math.sin(angle)*speed;
         }
         else{
           //Going backwards on its own
@@ -163,7 +305,9 @@
             speed=0;
           }
           car.position.z += Math.cos(angle)*speed; 
-          car.position.x += Math.sin(angle)*speed;          
+          car.position.x += Math.sin(angle)*speed;
+          carHitBox.position.z += Math.cos(angle)*speed; 
+          carHitBox.position.x += Math.sin(angle)*speed;   
         }
       }
       else{
@@ -172,32 +316,18 @@
           speed+=0.1;
           car.position.z += Math.cos(angle)*speed; 
           car.position.x += Math.sin(angle)*speed; 
+          carHitBox.position.z += Math.cos(angle)*speed; 
+          carHitBox.position.x += Math.sin(angle)*speed; 
       } 
       if(keyboard.pressed("down")) {
           speed-=0.1;
           car.position.z -= Math.cos(angle)*speed; 
-          car.position.x -= Math.sin(angle)*speed; 
+          car.position.x -= Math.sin(angle)*speed;
+          carHitBox.position.z -= Math.cos(angle)*speed; 
+          carHitBox.position.x -= Math.sin(angle)*speed; 
       }
       }
-      /*
-      if(keyboard.pressed("left")) { 
-          car.rotation.y += 0.1; 
-          angle += 0.1; 
-      } 
-      if(keyboard.pressed("right")) { 
-          car.rotation.y -= 0.1; 
-          angle -= 0.1; 
-      } 
-      if(keyboard.pressed("up")) { 
-          //car.translateZ(Math.cos(angle));
-          car.position.z += Math.cos(angle); 
-          car.position.x += Math.sin(angle); 
-      } 
-      if(keyboard.pressed("down")) { 
-          car.position.z -= Math.cos(angle); 
-          car.position.x -= Math.sin(angle); 
-      }*/
-          }
+   }
   </script>
 
 </body>
